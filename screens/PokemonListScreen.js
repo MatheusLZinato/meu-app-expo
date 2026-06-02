@@ -82,7 +82,7 @@ export default function PokemonListScreen({ navigation }) {
   // Tela normal: lista os Pokémon usando FlatList
   return (
     <View style={styles.container}>
-      <Header title="Pokédex" subtitle="Os 20 primeiros Pokémon" />
+      <Header title="Pokédex" subtitle="Toque em um Pokémon para jogar com ele!" />
       <FlatList
         data={pokemons}
         keyExtractor={(item) => item.id.toString()}

@@ -2,36 +2,35 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   Dimensions,
   TouchableOpacity,
   TouchableWithoutFeedback,
 } from 'react-native';
 
+import { useGame } from '../context/GameContext';
 import Button from '../components/Button';
-
-// =============================================================
-// TELA DO JOGO 2D - COELHO SALTADOR
-// Implementa: Game Loop (requestAnimationFrame), movimentação
-// de sprite (pulo com gravidade), pontuação em tempo real e
-// detecção de colisão AABB.
-// =============================================================
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Constantes do jogo
 const GAME_AREA_HEIGHT = SCREEN_HEIGHT * 0.55;
-const GROUND_HEIGHT = 70;          // altura do "chão"
+const GROUND_HEIGHT = 70;
 const PLAYER_SIZE = 50;
-const PLAYER_X = 60;               // posição fixa do jogador no eixo X
-const OBSTACLE_WIDTH = 30;
-const OBSTACLE_HEIGHT = 50;
-const GRAVITY = 0.95;              // gravidade aplicada a cada frame
-const JUMP_VELOCITY = -16;         // negativo = sobe (impulso do pulo)
-const OBSTACLE_SPEED = 6;          // velocidade dos cactos
+const PLAYER_X = 60;
+const OBSTACLE_SIZE = 50;
+const GRAVITY = 0.95;
+const JUMP_VELOCITY = -16;
+const OBSTACLE_SPEED = 6;
 
-export default function GameScreen() {
-  // ESTADOS visuais (re-renderizam a tela)
+const randomPokemonSprite = () => {
+  const id = Math.floor(Math.random() * 151) + 1;
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+};
+
+export default function GameScreen({ navigation }) {
+  const { selectedPokemon } = useGame();
+
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -39,18 +38,14 @@ export default function GameScreen() {
   const [playerY, setPlayerY] = useState(0);
   const [obstacles, setObstacles] = useState([]);
 
-  // REFS (não causam re-render - usadas pelo Game Loop a cada frame)
-  const playerYRef = useRef(0);      // posição vertical (0 = no chão)
-  const playerVyRef = useRef(0);     // velocidade vertical
+  const playerYRef = useRef(0);
+  const playerVyRef = useRef(0);
   const obstaclesRef = useRef([]);
   const scoreRef = useRef(0);
   const frameCountRef = useRef(0);
   const lastSpawnRef = useRef(0);
   const nextSpawnRef = useRef(60);
 
-  // ===========================================================
-  // DETECÇÃO DE COLISÃO AABB (Axis-Aligned Bounding Box)
-  // ===========================================================
   const checkCollision = (a, b) => {
     return (
       a.x < b.x + b.w &&
@@ -60,9 +55,6 @@ export default function GameScreen() {
     );
   };
 
-  // ===========================================================
-  // AÇÃO DE PULAR - só permite se estiver no chão
-  // ===========================================================
   const jump = () => {
     if (!isPlaying || gameOver) return;
     if (playerYRef.current >= -2) {
@@ -70,9 +62,6 @@ export default function GameScreen() {
     }
   };
 
-  // ===========================================================
-  // GAME LOOP - executa continuamente com requestAnimationFrame
-  // ===========================================================
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -81,46 +70,42 @@ export default function GameScreen() {
     const gameLoop = () => {
       frameCountRef.current += 1;
 
-      // --- 1) Física do jogador: aplica gravidade ---
       playerVyRef.current += GRAVITY;
       playerYRef.current += playerVyRef.current;
 
-      // Não deixar atravessar o chão
       if (playerYRef.current > 0) {
         playerYRef.current = 0;
         playerVyRef.current = 0;
       }
 
-      // --- 2) Spawn de novos cactos (intervalos aleatórios) ---
       if (frameCountRef.current - lastSpawnRef.current >= nextSpawnRef.current) {
         lastSpawnRef.current = frameCountRef.current;
         nextSpawnRef.current = 50 + Math.floor(Math.random() * 80);
         obstaclesRef.current.push({
           id: Date.now() + Math.random(),
           x: SCREEN_WIDTH,
+          sprite: randomPokemonSprite(),
         });
       }
 
-      // --- 3) Caixa de colisão do jogador ---
       const playerBox = {
-        x: PLAYER_X,
-        y: GAME_AREA_HEIGHT - GROUND_HEIGHT - PLAYER_SIZE + playerYRef.current,
-        w: PLAYER_SIZE,
-        h: PLAYER_SIZE,
+        x: PLAYER_X + 6,
+        y: GAME_AREA_HEIGHT - GROUND_HEIGHT - PLAYER_SIZE + playerYRef.current + 6,
+        w: PLAYER_SIZE - 12,
+        h: PLAYER_SIZE - 6,
       };
 
-      // --- 4) Move cactos e checa colisão ---
       let collided = false;
       obstaclesRef.current = obstaclesRef.current
         .map((o) => ({ ...o, x: o.x - OBSTACLE_SPEED }))
         .filter((o) => {
-          if (o.x < -OBSTACLE_WIDTH) return false;
+          if (o.x < -OBSTACLE_SIZE) return false;
 
           const obstacleBox = {
-            x: o.x,
-            y: GAME_AREA_HEIGHT - GROUND_HEIGHT - OBSTACLE_HEIGHT,
-            w: OBSTACLE_WIDTH,
-            h: OBSTACLE_HEIGHT,
+            x: o.x + 8,
+            y: GAME_AREA_HEIGHT - GROUND_HEIGHT - OBSTACLE_SIZE + 6,
+            w: OBSTACLE_SIZE - 16,
+            h: OBSTACLE_SIZE - 6,
           };
 
           if (checkCollision(playerBox, obstacleBox)) {
@@ -129,7 +114,6 @@ export default function GameScreen() {
           return true;
         });
 
-      // --- 5) Game Over se colidiu ---
       if (collided) {
         const finalScore = Math.floor(scoreRef.current / 6);
         setHighScore((prev) => (finalScore > prev ? finalScore : prev));
@@ -138,10 +122,7 @@ export default function GameScreen() {
         return;
       }
 
-      // --- 6) Pontuação cresce com o tempo ---
       scoreRef.current += 1;
-
-      // --- 7) Atualiza estados visuais ---
       setPlayerY(playerYRef.current);
       setObstacles([...obstaclesRef.current]);
       setScore(Math.floor(scoreRef.current / 6));
@@ -150,13 +131,9 @@ export default function GameScreen() {
     };
 
     animationFrameId = requestAnimationFrame(gameLoop);
-
     return () => cancelAnimationFrame(animationFrameId);
   }, [isPlaying]);
 
-  // ===========================================================
-  // INICIAR JOGO
-  // ===========================================================
   const startGame = () => {
     scoreRef.current = 0;
     playerYRef.current = 0;
@@ -173,16 +150,32 @@ export default function GameScreen() {
     setIsPlaying(true);
   };
 
-  // ===========================================================
-  // RENDERIZAÇÃO
-  // ===========================================================
+  if (!selectedPokemon) {
+    return (
+      <View style={styles.selectContainer}>
+        <Text style={styles.selectEmoji}>🎮</Text>
+        <Text style={styles.selectTitle}>Escolha seu Pokémon!</Text>
+        <Text style={styles.selectSubtitle}>
+          Vá à Pokédex, toque em um Pokémon{'\n'}e pressione "Jogar com este Pokémon"
+        </Text>
+        <Button
+          title="Ir para a Pokédex"
+          onPress={() => navigation.navigate('Utilitário')}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Placar */}
       <View style={styles.scoreBar}>
         <View style={styles.scoreItem}>
           <Text style={styles.scoreLabel}>PONTOS</Text>
           <Text style={styles.scoreText}>{score}</Text>
+        </View>
+        <View style={styles.pokemonBadge}>
+          <Image source={{ uri: selectedPokemon.image }} style={styles.badgeImage} />
+          <Text style={styles.badgeName}>{selectedPokemon.name}</Text>
         </View>
         <View style={styles.scoreItem}>
           <Text style={styles.scoreLabel}>RECORDE</Text>
@@ -190,18 +183,11 @@ export default function GameScreen() {
         </View>
       </View>
 
-      {/* Área de jogo (tocar pula) */}
       <TouchableWithoutFeedback onPress={jump}>
         <View style={[styles.gameArea, { height: GAME_AREA_HEIGHT }]}>
-          {/* Sol decorativo */}
           <View style={styles.sun} />
+          <View style={[styles.ground, { top: GAME_AREA_HEIGHT - GROUND_HEIGHT }]} />
 
-          {/* Chão */}
-          <View
-            style={[styles.ground, { top: GAME_AREA_HEIGHT - GROUND_HEIGHT }]}
-          />
-
-          {/* Jogador (coelho) */}
           <View
             style={[
               styles.player,
@@ -211,10 +197,9 @@ export default function GameScreen() {
               },
             ]}
           >
-            <Text style={styles.playerEmoji}>🐰</Text>
+            <Image source={{ uri: selectedPokemon.image }} style={styles.playerImage} />
           </View>
 
-          {/* Cactos */}
           {obstacles.map((o) => (
             <View
               key={o.id}
@@ -222,26 +207,25 @@ export default function GameScreen() {
                 styles.obstacle,
                 {
                   left: o.x,
-                  top: GAME_AREA_HEIGHT - GROUND_HEIGHT - OBSTACLE_HEIGHT,
+                  top: GAME_AREA_HEIGHT - GROUND_HEIGHT - OBSTACLE_SIZE,
                 },
               ]}
             >
-              <Text style={styles.obstacleEmoji}>🌵</Text>
+              <Image source={{ uri: o.sprite }} style={styles.obstacleImage} />
             </View>
           ))}
 
-          {/* Tela inicial */}
           {!isPlaying && !gameOver && (
             <View style={styles.overlay}>
-              <Text style={styles.title}>🐰 Coelho Saltador</Text>
+              <Image source={{ uri: selectedPokemon.image }} style={styles.overlayImage} />
+              <Text style={styles.title}>{selectedPokemon.name}</Text>
               <Text style={styles.subtitle}>
-                Toque na tela ou no botão PULAR{'\n'}para desviar dos cactos!
+                Desvie dos Pokémon inimigos!{'\n'}Toque na tela ou no botão PULAR
               </Text>
               <Button title="▶ Iniciar Jogo" onPress={startGame} />
             </View>
           )}
 
-          {/* Tela de Game Over */}
           {gameOver && (
             <View style={styles.overlay}>
               <Text style={styles.gameOverTitle}>💥 Game Over!</Text>
@@ -255,13 +239,9 @@ export default function GameScreen() {
         </View>
       </TouchableWithoutFeedback>
 
-      {/* Botão de pulo */}
       <View style={styles.controls}>
         <TouchableOpacity
-          style={[
-            styles.jumpButton,
-            (!isPlaying || gameOver) && styles.jumpButtonDisabled,
-          ]}
+          style={[styles.jumpButton, (!isPlaying || gameOver) && styles.jumpButtonDisabled]}
           onPress={jump}
           activeOpacity={0.7}
           disabled={!isPlaying || gameOver}
@@ -275,16 +255,49 @@ export default function GameScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1d3557' },
+  selectContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1d3557',
+    padding: 30,
+  },
+  selectEmoji: { fontSize: 64, marginBottom: 16 },
+  selectTitle: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  selectSubtitle: {
+    color: '#fff',
+    fontSize: 16,
+    opacity: 0.8,
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
   scoreBar: {
     flexDirection: 'row',
     backgroundColor: '#e63946',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    justifyContent: 'space-around',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  scoreItem: { alignItems: 'center' },
+  scoreItem: { alignItems: 'center', minWidth: 70 },
   scoreLabel: { color: '#fff', fontSize: 11, letterSpacing: 1.5, opacity: 0.9 },
-  scoreText: { color: '#fff', fontSize: 30, fontWeight: 'bold' },
+  scoreText: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
+  pokemonBadge: { alignItems: 'center' },
+  badgeImage: { width: 44, height: 44 },
+  badgeName: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+    textAlign: 'center',
+  },
   gameArea: {
     backgroundColor: '#fce5b8',
     position: 'relative',
@@ -313,18 +326,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: PLAYER_SIZE,
     height: PLAYER_SIZE,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  playerEmoji: { fontSize: 42 },
+  playerImage: { width: PLAYER_SIZE, height: PLAYER_SIZE },
   obstacle: {
     position: 'absolute',
-    width: OBSTACLE_WIDTH,
-    height: OBSTACLE_HEIGHT,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    width: OBSTACLE_SIZE,
+    height: OBSTACLE_SIZE,
   },
-  obstacleEmoji: { fontSize: 44 },
+  obstacleImage: { width: OBSTACLE_SIZE, height: OBSTACLE_SIZE },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(29,53,87,0.92)',
@@ -333,12 +342,14 @@ const styles = StyleSheet.create({
     zIndex: 10,
     padding: 20,
   },
+  overlayImage: { width: 90, height: 90, marginBottom: 8 },
   title: {
     color: '#fff',
     fontSize: 26,
     fontWeight: 'bold',
     marginBottom: 12,
     textAlign: 'center',
+    textTransform: 'capitalize',
   },
   subtitle: {
     color: '#fff',

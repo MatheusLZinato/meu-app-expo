@@ -10,11 +10,11 @@ import {
 import axios from 'axios';
 
 import Button from '../components/Button';
+import { useGame } from '../context/GameContext';
 
-// Tela de detalhes - acessada via Stack Navigator
-// Recebe o Pokémon via route.params (passado pela tela anterior)
 export default function PokemonDetailScreen({ route, navigation }) {
   const { pokemon } = route.params;
+  const { setSelectedPokemon } = useGame();
 
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +35,15 @@ export default function PokemonDetailScreen({ route, navigation }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePlayAs = () => {
+    setSelectedPokemon({
+      id: details.id,
+      name: details.name,
+      image: pokemon.image,
+    });
+    navigation.navigate('Jogo');
   };
 
   if (loading) {
@@ -65,6 +74,12 @@ export default function PokemonDetailScreen({ route, navigation }) {
       <Text style={styles.name}>
         #{details.id} {details.name}
       </Text>
+
+      <Button
+        title="🎮 Jogar com este Pokémon"
+        onPress={handlePlayAs}
+        style={styles.playButton}
+      />
 
       <View style={styles.infoBox}>
         <Text style={styles.sectionTitle}>Informações</Text>
@@ -135,6 +150,11 @@ const styles = StyleSheet.create({
     color: '#1d3557',
     textTransform: 'capitalize',
     marginBottom: 16,
+  },
+  playButton: {
+    backgroundColor: '#2a9d8f',
+    marginBottom: 20,
+    width: '100%',
   },
   infoBox: {
     backgroundColor: '#fff',
