@@ -22,6 +22,8 @@ const OBSTACLE_SIZE = 50;
 const GRAVITY = 0.95;
 const JUMP_VELOCITY = -16;
 const OBSTACLE_SPEED = 6;
+const GROUND_OBSTACLE_Y = GAME_AREA_HEIGHT - GROUND_HEIGHT - OBSTACLE_SIZE;
+const FLYING_OBSTACLE_Y = GAME_AREA_HEIGHT - GROUND_HEIGHT - PLAYER_SIZE - OBSTACLE_SIZE - 5;
 
 const randomPokemonSprite = () => {
   const id = Math.floor(Math.random() * 151) + 1;
@@ -81,10 +83,13 @@ export default function GameScreen({ navigation }) {
       if (frameCountRef.current - lastSpawnRef.current >= nextSpawnRef.current) {
         lastSpawnRef.current = frameCountRef.current;
         nextSpawnRef.current = 50 + Math.floor(Math.random() * 80);
+        const isFlying = Math.random() < 0.35;
         obstaclesRef.current.push({
           id: Date.now() + Math.random(),
           x: SCREEN_WIDTH,
           sprite: randomPokemonSprite(),
+          isFlying,
+          y: isFlying ? FLYING_OBSTACLE_Y : GROUND_OBSTACLE_Y,
         });
       }
 
@@ -103,7 +108,7 @@ export default function GameScreen({ navigation }) {
 
           const obstacleBox = {
             x: o.x + 8,
-            y: GAME_AREA_HEIGHT - GROUND_HEIGHT - OBSTACLE_SIZE + 6,
+            y: o.y + 8,
             w: OBSTACLE_SIZE - 16,
             h: OBSTACLE_SIZE - 6,
           };
@@ -205,10 +210,7 @@ export default function GameScreen({ navigation }) {
               key={o.id}
               style={[
                 styles.obstacle,
-                {
-                  left: o.x,
-                  top: GAME_AREA_HEIGHT - GROUND_HEIGHT - OBSTACLE_SIZE,
-                },
+                { left: o.x, top: o.y },
               ]}
             >
               <Image source={{ uri: o.sprite }} style={styles.obstacleImage} />
