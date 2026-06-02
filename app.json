@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "MeuAppExpo",
+    "slug": "meu-app-expo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#1d3557"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1d3557"
+      }
+    }
+  }
+}
