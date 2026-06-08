@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Expo Web",
+      "type": "shell",
+      "command": "node start-expo.js",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "close": true
+      }
+    },
+    {
+      "label": "Kill Expo Web",
+      "type": "shell",
+      "command": "lsof -ti:8081 | xargs kill -9 2>/dev/null; exit 0",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "close": true
+      }
+    }
+  ]
+}
