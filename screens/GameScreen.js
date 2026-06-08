@@ -23,7 +23,7 @@ const GRAVITY = 0.95;
 const JUMP_VELOCITY = -16;
 const OBSTACLE_SPEED = 6;
 const GROUND_OBSTACLE_Y = GAME_AREA_HEIGHT - GROUND_HEIGHT - OBSTACLE_SIZE;
-const FLYING_OBSTACLE_Y = 10;
+const FLYING_OBSTACLE_Y = GAME_AREA_HEIGHT - GROUND_HEIGHT - PLAYER_SIZE - OBSTACLE_SIZE - 5;
 
 const randomPokemonSprite = () => {
   const id = Math.floor(Math.random() * 151) + 1;
